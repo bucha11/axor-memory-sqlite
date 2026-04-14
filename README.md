@@ -1,8 +1,8 @@
 # axor-memory-sqlite
 
-[![CI](https://github.com/Bucha11/axor-memory-sqlite/actions/workflows/ci.yml/badge.svg)](https://github.com/Bucha11/axor-memory-sqlite/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/axor-memory-sqlite)](https://pypi.org/project/axor-memory-sqlite/)
-[![Python](https://img.shields.io/pypi/pyversions/axor-memory-sqlite)](https://pypi.org/project/axor-memory-sqlite/)
+[![CI](https://github.com/Bucha11/axor-memory-sqlite/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Bucha11/axor-memory-sqlite/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/axor-memory-sqlite?cacheSeconds=300)](https://pypi.org/project/axor-memory-sqlite/)
+[![Python](https://img.shields.io/pypi/pyversions/axor-memory-sqlite?cacheSeconds=300)](https://pypi.org/project/axor-memory-sqlite/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **SQLite memory provider for [axor-core](https://github.com/Bucha11/axor-core).**
