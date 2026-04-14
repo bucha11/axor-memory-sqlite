@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "axor-memory-sqlite"
+version = "0.1.0"
+description = "SQLite memory provider for axor-core"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+keywords = ["axor", "memory", "sqlite", "agents"]
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Intended Audience :: Developers",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Topic :: Database",
+	"Topic :: Software Development :: Libraries",
+]
+dependencies = ["axor-core>=0.1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.urls]
+Repository = "https://github.com/Bucha11/axor-memory-sqlite"
+"Bug Tracker" = "https://github.com/Bucha11/axor-memory-sqlite/issues"
+Changelog = "https://github.com/Bucha11/axor-memory-sqlite/releases"
+
+[tool.hatch.build.targets.wheel]
+packages = ["axor_memory_sqlite"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
