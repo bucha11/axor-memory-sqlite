@@ -60,6 +60,10 @@ CREATE INDEX IF NOT EXISTS idx_accessed  ON memory_fragments(accessed_at);
 CREATE INDEX IF NOT EXISTS idx_ns_value  ON memory_fragments(namespace, value);
 """
 
+# Bumped per migration. Stored in PRAGMA user_version. Future schema
+# changes should: read user_version → if behind, run incremental DDL → bump.
+_SCHEMA_VERSION = 1
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -116,7 +120,26 @@ class SQLiteMemoryProvider(MemoryProvider):
             if self._conn is None:
                 self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
                 self._conn.row_factory = sqlite3.Row
+                # WAL mode: writers don't block readers — important for high-
+                # frequency working-memory writes during agent runs. Skip on
+                # ":memory:" (WAL is a no-op there) to keep test paths fast.
+                if self._db_path != ":memory:":
+                    try:
+                        self._conn.execute("PRAGMA journal_mode=WAL")
+                        # Reasonable durability/throughput tradeoff for a memory store.
+                        self._conn.execute("PRAGMA synchronous=NORMAL")
+                    except sqlite3.OperationalError:
+                        # Some FS (network mounts) reject WAL — fall back silently.
+                        pass
                 self._conn.executescript(_SCHEMA)
+                # Schema versioning: read PRAGMA user_version, run migrations
+                # if behind, then bump. Today the schema is at v1 and there
+                # are no migrations; this is the hook for future ones.
+                cur = self._conn.execute("PRAGMA user_version")
+                current_version = int((cur.fetchone() or [0])[0])
+                if current_version < _SCHEMA_VERSION:
+                    # No migrations to run for v1 → just stamp the version.
+                    self._conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
                 self._conn.commit()
             return self._conn
 
