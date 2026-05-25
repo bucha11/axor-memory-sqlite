@@ -91,6 +91,40 @@ async def test_delete_empty_keys() -> None:
 
 
 @pytest.mark.asyncio
+async def test_load_raises_by_default_on_db_error() -> None:
+    provider = SQLiteMemoryProvider(":memory:")
+
+    async def broken_run(fn):
+        raise RuntimeError("db broken")
+
+    provider._run = broken_run
+    with pytest.raises(RuntimeError, match="db broken"):
+        await provider.load(MemoryQuery(max_results=10))
+
+
+@pytest.mark.asyncio
+async def test_load_can_suppress_db_errors() -> None:
+    provider = SQLiteMemoryProvider(":memory:", suppress_errors=True)
+
+    async def broken_run(fn):
+        raise RuntimeError("db broken")
+
+    provider._run = broken_run
+    assert await provider.load(MemoryQuery(max_results=10)) == []
+
+
+@pytest.mark.asyncio
+async def test_delete_can_suppress_db_errors() -> None:
+    provider = SQLiteMemoryProvider(":memory:", suppress_errors=True)
+
+    async def broken_run(fn):
+        raise RuntimeError("db broken")
+
+    provider._run = broken_run
+    assert await provider.delete("ns", ["k"]) == 0
+
+
+@pytest.mark.asyncio
 async def test_load_no_filters() -> None:
     async with SQLiteMemoryProvider(":memory:") as provider:
         await provider.save([

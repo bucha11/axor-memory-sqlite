@@ -17,7 +17,7 @@ Persistent cross-session memory for governed agents. Zero extra dependencies —
 pip install axor-memory-sqlite
 ```
 
-Requires `axor-core >= 0.1.0`.
+Requires `axor-core >= 0.5.0, < 0.6`.
 
 ---
 
@@ -80,9 +80,14 @@ from axor_memory_sqlite import SQLiteMemoryProvider
 
 provider = SQLiteMemoryProvider("~/.axor/memory.db")  # persistent
 provider = SQLiteMemoryProvider(":memory:")            # in-memory, tests only
+provider = SQLiteMemoryProvider("~/.axor/memory.db", suppress_errors=True)  # best effort
 ```
 
-All methods are async. I/O runs in a thread pool — async callers are never blocked.
+All methods are async. SQLite calls are serialized behind a process-local lock
+and run on the current thread to keep sqlite connections thread-affine.
+
+By default, database errors are raised so callers can detect corruption or
+permission problems. Set `suppress_errors=True` only for best-effort memory.
 
 ### `save(fragments)`
 
@@ -239,8 +244,23 @@ async def test_memory():
 ## Requirements
 
 - Python 3.11+
-- `axor-core >= 0.1.0`
+- [`axor-core`](https://github.com/Bucha11/axor-core) >= 0.5.0
 - No extra dependencies — uses stdlib `sqlite3` + `asyncio`
+
+---
+
+## Ecosystem
+
+| Package | Role |
+|---------|------|
+| [`axor-core`](https://github.com/Bucha11/axor-core) | Governance kernel — defines `MemoryProvider` protocol |
+| [`axor-cli`](https://github.com/Bucha11/axor-cli) | Governed terminal runtime — uses this package for `/memory` |
+| [`axor-langchain`](https://github.com/Bucha11/axor-langchain) | LangChain middleware — `AxorMiddleware(memory_provider=...)` |
+| [`axor-claude`](https://github.com/Bucha11/axor-claude) | Claude / Claude Code adapter |
+| [`axor-classifier-simple`](https://github.com/Bucha11/axor-classifier-simple) | ML task signal derivation (optional) |
+| [`axor-classifier-llm`](https://github.com/Bucha11/axor-classifier-llm) | LLM verifier for gray-zone escalation (optional) |
+| [`axor-telemetry`](https://github.com/Bucha11/axor-telemetry) | Privacy-preserving governance feedback |
+| [`axor-benchmarks`](https://github.com/Bucha11/axor-benchmarks) | Governance proof layer |
 
 ---
 

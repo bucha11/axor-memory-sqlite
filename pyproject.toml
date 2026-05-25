@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "axor-memory-sqlite"
-version = "0.2.0"
+version = "0.3.0"
 description = "SQLite memory provider for axor-core"
 readme = "README.md"
 license = { text = "MIT" }
@@ -19,7 +19,7 @@ classifiers = [
 	"Topic :: Database",
 	"Topic :: Software Development :: Libraries",
 ]
-dependencies = ["axor-core>=0.4.0,<0.5"]
+dependencies = ["axor-core>=0.6.0,<0.7"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]

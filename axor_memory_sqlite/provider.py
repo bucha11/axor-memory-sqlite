@@ -4,7 +4,7 @@ from __future__ import annotations
 SQLite-backed MemoryProvider for axor-core.
 
 Zero external dependencies — uses Python's built-in sqlite3.
-Thread-safe via asyncio.Lock + thread pool execution.
+Thread-safe via asyncio.Lock around short SQLite operations.
 
 Schema:
 
@@ -96,8 +96,8 @@ class SQLiteMemoryProvider(MemoryProvider):
     """
     SQLite-backed MemoryProvider.
 
-    All I/O runs in a thread pool via asyncio.to_thread()
-    so async callers are never blocked.
+    SQLite calls are serialized behind a process-local lock. They run on the
+    current thread so sqlite connections are never shared across worker threads.
 
     Usage::
 
@@ -109,11 +109,23 @@ class SQLiteMemoryProvider(MemoryProvider):
             ...
     """
 
-    def __init__(self, db_path: str | Path = ":memory:") -> None:
+    def __init__(
+        self,
+        db_path: str | Path = ":memory:",
+        *,
+        suppress_errors: bool = False,
+    ) -> None:
         self._db_path = str(Path(db_path).expanduser()) if db_path != ":memory:" else ":memory:"
+        self._suppress_errors = suppress_errors
         self._lock = asyncio.Lock()
         self._conn: sqlite3.Connection | None = None
-        self._conn_lock = threading.Lock()  # protects _open() from thread pool
+        self._conn_lock = threading.Lock()
+
+    def _handle_error(self, operation: str, fallback):
+        logger.exception("memory %s failed", operation)
+        if self._suppress_errors:
+            return fallback
+        raise
 
     def _open(self) -> sqlite3.Connection:
         with self._conn_lock:
@@ -144,8 +156,15 @@ class SQLiteMemoryProvider(MemoryProvider):
             return self._conn
 
     async def _run(self, fn):
-        """Run a blocking DB call in thread pool."""
-        return await asyncio.to_thread(fn)
+        """
+        Run one serialized SQLite operation.
+
+        These calls are intentionally executed inline while the provider-level
+        asyncio.Lock is held. The operations are small, and this avoids a class
+        of hangs seen in sandboxed runtimes when sqlite connections are opened
+        inside asyncio's default thread pool.
+        """
+        return fn()
 
     # ── Async context manager ─────────────────────────────────────────────────
 
@@ -199,8 +218,7 @@ class SQLiteMemoryProvider(MemoryProvider):
             async with self._lock:
                 return await self._run(_load)
         except Exception:
-            logger.exception("memory load failed")
-            return []
+            return self._handle_error("load", [])
 
     async def save(self, fragments: list[MemoryFragment]) -> None:
         if not fragments:
@@ -272,8 +290,7 @@ class SQLiteMemoryProvider(MemoryProvider):
             async with self._lock:
                 return await self._run(_delete)
         except Exception:
-            logger.exception("memory delete failed")
-            return 0
+            return self._handle_error("delete", 0)
 
     async def evict(
         self,
@@ -308,8 +325,7 @@ class SQLiteMemoryProvider(MemoryProvider):
             async with self._lock:
                 return await self._run(_evict)
         except Exception:
-            logger.exception("memory evict failed")
-            return 0
+            return self._handle_error("evict", 0)
 
     async def namespaces(self) -> list[str]:
         def _ns():
@@ -323,8 +339,7 @@ class SQLiteMemoryProvider(MemoryProvider):
             async with self._lock:
                 return await self._run(_ns)
         except Exception:
-            logger.exception("memory namespaces failed")
-            return []
+            return self._handle_error("namespaces", [])
 
     async def close(self) -> None:
         if self._conn is not None:

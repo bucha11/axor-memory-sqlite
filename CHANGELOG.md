@@ -21,10 +21,8 @@ Initial release.
 
 ### Added
 - `SQLiteMemoryProvider` implementing the `MemoryProvider` ABC from axor-core.
-- All DB operations run inside `asyncio.to_thread()` so the event loop is
-  never blocked.
-- `asyncio.Lock` for async callers plus `threading.Lock` around `_open()`
-  for thread safety.
+- DB operations are serialized for async callers, with a `threading.Lock`
+  around `_open()` for connection initialization safety.
 - Async context-manager support
   (`async with SQLiteMemoryProvider(...) as provider:`).
 - Schema with `PRIMARY KEY (namespace, key)` and indexes on `namespace`,
